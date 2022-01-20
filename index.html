@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Snake Game</title>
+    <link
+      rel="icon"
+      type="image/png"
+      href="https://cdn.glitch.com/4a940516-bebb-4e5c-9889-4b89474d58e5%2Fdownload%20(5).png?v=1614186246226"
+      sizes="16x16"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <marquee direction="right" scrollamount="25"
+      ><h1><strong>🐍Snake Game🐍</strong></h1></marquee
+    >
+
+    <canvas id="canvas" width="1050" height="450"></canvas>
+    <script>
+      var game = {
+        tickNumber: 0,
+        timer: null,
+        score: 0,
+        highscore: 0,
+        board: [
+          "###################################",
+          "#     #                           #",
+          "#                                 #",
+          "#                             #   #",
+          "#               #                 #",
+          "#              #        #         #",
+          "#                      ###        #",
+          "#       #               #         #",
+          "#                                 #",
+          "#   #           #                 #",
+          "#                    #            #",
+          "#                            #    #",
+          "#          #                      #",
+          "###################################"
+        ],
+        fruit: [],
+        //fruit: [
+        //  {x: 9, y: 5}
+        //],
+        tick: function() {
+          window.clearTimeout(game.timer);
+          game.tickNumber++;
+          if (game.tickNumber % 50 == 0) {
+            game.addRandomFruit();
+          }
+          var result = snake.move();
+          if (result == "gameover") {
+            alert("Game over! Your score is: " + game.score + "!");
+            if (game.score > game.highscore) {
+              game.highscore = game.score;
+              alert(
+                "New high score! Your local high score is: " +
+                  game.highscore +
+                  "!"
+              );
+            }
+            return;
+          }
+          graphics.drawGame();
+          game.timer = window.setTimeout("game.tick()", 200); //this is how it loops
+        },
+        addRandomFruit: function() {
+          var randomY = Math.floor(Math.random() * game.board.length) + 0;
+          var randomX =
+            Math.floor(Math.random() * game.board[randomY].length) + 0;
+          var randomLocation = { x: randomX, y: randomY };
+          if (game.isEmpty(randomLocation) && !game.isFruit(randomLocation)) {
+            game.fruit.push(randomLocation);
+          }
+        },
+        isEmpty: function(location) {
+          return game.board[location.y][location.x] == " ";
+        },
+        isWall: function(location) {
+          return game.board[location.y][location.x] == "#";
+        },
+        isFruit: function(location) {
+          for (
+            var fruitNumber = 0;
+            fruitNumber < game.fruit.length;
+            fruitNumber++
+          ) {
+            var fruit = game.fruit[fruitNumber];
+            if (location.x == fruit.x && location.y == fruit.y) {
+              game.fruit.splice(fruitNumber, 1);
+              return true;
+            }
+          }
+          return false;
+        },
+        isSnake: function(location) {
+          for (var snakePart = 0; snakePart < snake.parts.length; snakePart++) {
+            var part = snake.parts[snakePart];
+            if (location.x == part.x && location.y == part.y) {
+              return true;
+            }
+          }
+          return false;
+        }
+      };
+
+      var snake = {
+        parts: [{ x: 4, y: 2 }, { x: 3, y: 2 }, { x: 2, y: 2 }],
+        facing: "E",
+        nextLocation: function() {
+          var snakeHead = snake.parts[0];
+          var targetX = snakeHead.x;
+          var targetY = snakeHead.y;
+          targetY = snake.facing == "N" ? targetY - 1 : targetY;
+          targetY = snake.facing == "S" ? targetY + 1 : targetY;
+          targetX = snake.facing == "W" ? targetX - 1 : targetX;
+          targetX = snake.facing == "E" ? targetX + 1 : targetX;
+          return { x: targetX, y: targetY };
+        },
+        move: function() {
+          var location = snake.nextLocation();
+          if (game.isWall(location) || game.isSnake(location)) {
+            return "gameover";
+          }
+          if (game.isEmpty(location)) {
+            snake.parts.unshift(location);
+            snake.parts.pop();
+          }
+          if (game.isFruit(location)) {
+            snake.parts.unshift(location);
+            game.score++;
+            game.addRandomFruit();
+          }
+        }
+      };
+
+      var graphics = {
+        canvas: document.getElementById("canvas"),
+        squareSize: 30,
+        drawBoard: function(ctx) {
+          var currentYoffset = 0;
+          game.board.forEach(function checkLine(line) {
+            line = line.split("");
+            var currentXoffset = 0;
+            line.forEach(function checkCharacter(character) {
+              if (character == "#") {
+                ctx.fillStyle = "black";
+                ctx.fillRect(
+                  currentXoffset,
+                  currentYoffset,
+                  graphics.squareSize,
+                  graphics.squareSize
+                );
+              }
+              currentXoffset += graphics.squareSize;
+            });
+            currentYoffset += graphics.squareSize;
+          });
+        },
+        draw: function(ctx, source, color) {
+          source.forEach(function(part) {
+            var partXlocation = part.x * graphics.squareSize;
+            var partYlocation = part.y * graphics.squareSize;
+            ctx.fillStyle = color;
+            ctx.fillRect(
+              partXlocation,
+              partYlocation,
+              graphics.squareSize,
+              graphics.squareSize
+            );
+          });
+        },
+        drawGame: function() {
+          var ctx = graphics.canvas.getContext("2d");
+          ctx.clearRect(0, 0, graphics.canvas.width, graphics.canvas.height);
+          graphics.drawBoard(ctx);
+          graphics.draw(ctx, game.fruit, "coral");
+          graphics.draw(ctx, snake.parts, "blue");
+        }
+      };
+
+      var gameControl = {
+        processInput: function(keyPressed) {
+          var key = keyPressed.key.toLowerCase();
+          var targetDirection = snake.facing;
+          if (key == "w" && snake.facing != "S") targetDirection = "N";
+          if (key == "a" && snake.facing != "E") targetDirection = "W";
+          if (key == "s" && snake.facing != "N") targetDirection = "S";
+          if (key == "d" && snake.facing != "W") targetDirection = "E";
+          snake.facing = targetDirection;
+          game.tick();
+        },
+        startGame: function() {
+          window.addEventListener("keypress", gameControl.processInput, false);
+          game.tick();
+        }
+      };
+
+      function playStart() {
+        game.tickNumber = 0;
+        game.timer = null;
+        game.score = 0;
+        snake.parts.length = 0;
+        snake.parts = [{ x: 4, y: 2 }, { x: 3, y: 2 }, { x: 2, y: 2 }];
+        snake.facing = "E";
+        game.fruit = [];
+        game.addRandomFruit();
+        gameControl.startGame();
+      }
+
+      text("Score:" + game.highscore + "!");
+    </script>
+
+    <form>
+      <input type="button" value="Play" onclick="playStart()" />
+    </form>
+
+    <p>
+      <a href="https://home-of-piplup7575.glitch.me/">Main Site</a><br />
+      Press play to start!<br />
+      The goal of this game is to eat as many fruits (the red blocks) to make
+      your snake grow long!<br />
+      But don't run into the walls or into yourself or you will loose. Keep
+      playing until the game ends, your score will be displayed at the end in a
+      popup.<br />
+      Press play to play again!<br />
+      <u>Controls:</u><br />
+      W: Move Up<br />
+      A: Move Left<br />
+      S: Move Down<br />
+      D: Move Right<br />
+      The mat is changed every now and then so check back for more!
+    </p>
+    
+    <p>Music Credits: <a href="https://www.youtube.com/channel/UCalWYKwd1Y7O1pbQ_JChvdA">ALFL</a>, <a href="https://youtu.be/2Urhz5dnB5Q">Yoshi's Island - Yoshi's Bop - Map Theme Remix</a></p>
+    <p>Here are the audio controls for the music:</p>
+      <audio controls autoplay> 
+          <source src="https://cdn.glitch.com/89979aba-b63e-4125-a86b-cd8a02f2d0fb%2FYoshi's%20Island%20-%20Yoshi%20Bop%20-%20(Map%20Theme%20remix)%20(64%20kbps).mp3?v=1622063057121" type="audio/mpeg"> 
+      </audio>
+    
+  </body>
+</html>
